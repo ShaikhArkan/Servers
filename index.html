@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server View Analytics</title>
+    <style>
+        :root {
+            --bg-color: #0a0a0a;
+            --card-bg: #121212;
+            --border-color: #262626;
+            --text-main: #ffffff;
+            --text-muted: #8e8e8e;
+            --accent-color: #0070f3;
+            --accent-glow: rgba(0, 112, 243, 0.15);
+            --success-color: #00e676;
+            --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-stack);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* Dashboard Container */
+        .dashboard-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            width: 100%;
+            max-width: 500px;
+            padding: 32px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Header Styles */
+        .panel-header {
+            margin-bottom: 28px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 16px;
+        }
+
+        .panel-header h1 {
+            font-size: 1.1rem;
+            font-weight: 500;
+            letter-spacing: -0.02em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-header h1::before {
+            content: '';
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--accent-color);
+        }
+
+        .breadcrumbs {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            display: none;
+        }
+
+        .breadcrumbs span {
+            color: var(--text-main);
+        }
+
+        /* Navigation Lists */
+        .server-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .server-item {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 14px 18px;
+            border-radius: 8px;
+            text-align: left;
+            font-size: 0.95rem;
+            cursor: not-allowed;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Active/Workable Buttons */
+        .server-item.active {
+            color: var(--text-main);
+            cursor: pointer;
+            border-color: #404040;
+        }
+
+        .server-item.active:hover {
+            border-color: var(--accent-color);
+            background-color: rgba(255, 255, 255, 0.02);
+            padding-left: 24px;
+        }
+
+        .server-item::after {
+            content: 'Offline';
+            font-size: 0.75rem;
+            color: #3a3a3a;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .server-item.active::after {
+            content: 'Ready →';
+            color: var(--accent-color);
+        }
+
+        /* Faces Setup */
+        .face {
+            display: none;
+        }
+
+        .face.current {
+            display: block;
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        /* Phase 3: Live View Display */
+        .analytics-display {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .view-count {
+            font-size: 3.5rem;
+            font-weight: 700;
+            letter-spacing: -0.04em;
+            color: var(--text-main);
+            margin-bottom: 4px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .view-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 24px;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 230, 118, 0.06);
+            border: 1px solid rgba(0, 230, 118, 0.2);
+            color: var(--success-color);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            background-color: var(--success-color);
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        /* Back Button */
+        .back-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 16px;
+            transition: color 0.2s;
+        }
+        
+        .back-btn:hover {
+            color: var(--text-main);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 8px var(--success-color); }
+            100% { transform: scale(0.95); opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-card">
+        
+        <button id="backBtn" class="back-btn" style="display: none;">← Back</button>
+        <div id="breadcrumbs" class="breadcrumbs">Servers / <span id="currentRoute"></span></div>
+
+        <div id="phase1" class="face current">
+            <div class="panel-header">
+                <h1>Infrastructure / Servers</h1>
+            </div>
+            <div class="server-list">
+                <div class="server-item">1. Chat Friendly</div>
+                <div class="server-item">2. Political Chatbot</div>
+                <div class="server-item">3. E-Voting Portal</div>
+                <div class="server-item">3. Manzil</div>
+                <div class="server-item active" onclick="goToPhase2()">4. Your Manager</div>
+                <div class="server-item">5. Business Buddy</div>
+                <div class="server-item">6. Doctor AI</div>
+                <div class="server-item">7. Apna Akola</div>
+                <div class="server-item">8. Mudaris</div>
+            </div>
+        </div>
+
+        <div id="phase2" class="face">
+            <div class="panel-header">
+                <h1 style="color: var(--text-main)">Your Manager</h1>
+            </div>
+            <div class="server-list">
+                <div class="server-item active" onclick="goToPhase3()">Server 1</div>
+                <div class="server-item">Server 2</div>
+            </div>
+        </div>
+
+        <div id="phase3" class="face">
+            <div class="panel-header">
+                <h1>Live Analytics</h1>
+            </div>
+            <div class="analytics-display">
+                <div class="view-count">30,706</div>
+                <div class="view-label">Total Views (Past 24 Hours)</div>
+                
+                <div class="status-pill">
+                    <span class="status-dot"></span>
+                    Server 1 Active & Monitoring
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const phase1 = document.getElementById('phase1');
+        const phase2 = document.getElementById('phase2');
+        const phase3 = document.getElementById('phase3');
+        const backBtn = document.getElementById('backBtn');
+        const breadcrumbs = document.getElementById('breadcrumbs');
+        const currentRoute = document.getElementById('currentRoute');
+
+        let currentPhase = 1;
+
+        function goToPhase2() {
+            phase1.classList.remove('current');
+            phase2.classList.add('current');
+            
+            breadcrumbs.style.display = 'block';
+            backBtn.style.display = 'flex';
+            currentRoute.innerText = 'Your Manager';
+            currentPhase = 2;
+        }
+
+        function goToPhase3() {
+            phase2.classList.remove('current');
+            phase3.classList.add('current');
+            
+            currentRoute.innerText = 'Your Manager / Server 1';
+            currentPhase = 3;
+        }
+
+        // Logic for Back Navigation Button
+        backBtn.addEventListener('click', () => {
+            if (currentPhase === 3) {
+                phase3.classList.remove('current');
+                phase2.classList.add('current');
+                currentRoute.innerText = 'Your Manager';
+                currentPhase = 2;
+            } else if (currentPhase === 2) {
+                phase2.classList.remove('current');
+                phase1.classList.add('current');
+                breadcrumbs.style.display = 'none';
+                backBtn.style.display = 'none';
+                currentPhase = 1;
+            }
+        });
+    </script>
+</body>
+</html>
